@@ -1,5 +1,6 @@
 ;;;; Procedures for server-client communcation:
 ;;;; make and receive requests of the form we're going to use.
+;; You can load all definitions by using (load "requests.scm")
 
 (define x 100)
 
@@ -39,6 +40,8 @@
 
 (define (process-request req)
   ;; TODO logic for processing a request
+  (pp (list 'evaluated ((request-body req))))
+  
   )
 
 (define (make-request type id proc)
@@ -86,10 +89,8 @@
 (define (process-request-str c-in)
   (let ((req (eval-str c-in)))
     (if (request? req)
-	;; For now, process all requests
-	(pp (list 'evaluated ((request-body req))))
-	(error "Object was not a request")))
-  )
+	(process-request req)
+	(error "Object was not a request"))))
 
 (process-request-str (request-to-str (make-request 'commit 3 (lambda () 3))))
 
@@ -129,6 +130,7 @@
 
 ;;; How to send and receive requests
 
+#|
 ;; Run on the server...
 (make-server 8002)
 
@@ -139,3 +141,4 @@
 ;; The server should receive the request...
 ;(received-from 8002 "(make-request 'commit 1 (lambda () (+ 2000 25)))")
 ;(evaluated 2025)
+|#

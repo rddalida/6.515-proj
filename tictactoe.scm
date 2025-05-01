@@ -33,17 +33,29 @@
         first
         #f)))
 
+(define (check-lines lines)
+  (let loop ((lst lines) (result #f))
+    (cond
+      ((null? lst) result)
+      ((not (eq? result #f)) result)
+      (else
+       (let ((winner (check-line (car lst))))
+         (if (not (eq? winner #f))
+             winner
+             (loop (cdr lst) result)))))))
+
 (define (check-win board)
-  (define (check-rows) (any? check-line board))
+  (define (check-rows) (check-lines board))
 
-  (define (check-columns) (any? check-line (apply map list board)))
+  (define (check-columns) (check-lines (apply map list board)))
 
-  (define (check-diagonals)
-    (let ((main-diagonal (map (lambda (i) (list-ref (list-ref board i) i)) (range board-size)))
-          (anti-diagonal (map (lambda (i) (list-ref (list-ref board i) (- (- board-size 1) i))) (range board-size))))
-      (or (check-line main-diagonal) (check-line anti-diagonal))))
+  (define (check-diagonal board)
+    (map (lambda (i) (list-ref (list-ref board i) i)) (range board-size)))
+
+  (define (check-antidiagonal board)
+    (map (lambda (i) (list-ref (list-ref board i) (- (- board-size 1) i))) (range board-size)))
   
-  (or (check-rows) (check-columns) (check-diagonals)))
+  (or (check-rows) (check-columns) (check-line (check-diagonal board)) (check-line (check-antidiagonal board))))
 
 (define (range n)
   (let loop ((i 0) (lst '()))
@@ -60,8 +72,8 @@
 (place-symbol "O" 1 1 board)
 (place-symbol "O" 0 1 board)
 (place-symbol "O" 0 2 board)
-(place-symbol "X" 0 3 board)
-(place-symbol "X" 0 4 board)
+(place-symbol "O" 0 3 board)
+(place-symbol "O" 0 4 board)
 (place-symbol "X" 2 1 board)
 (place-symbol "X" 3 1 board)
 (place-symbol "O" 4 1 board)
@@ -69,5 +81,3 @@
 (place-symbol "O" 3 3 board)
 (place-symbol "O" 4 4 board)
 (place-symbol "X" 1 3 board)
-
-; TODO: logic for determining what symbol to use / adding players / integration

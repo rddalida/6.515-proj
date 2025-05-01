@@ -50,7 +50,7 @@
 
 
 ;; handling of requests on the client side
-(define (process-request-client req)
+(define (process-request-client req server)
   (let ((req-type (request-type req)))
     (cond
       ((eq? req-type 'initial)
@@ -58,7 +58,10 @@
       ((eq? req-type 'prepare)
        (begin
 	 (pp "Client received prepare, sending back to server")
-	 (send-request 8002 'prepare client-request-id (request-body req))
+	 (send-request server 'prepare client-request-id (request-body req))
+	 ;; Now the client hangs until it receives the request back
+	 ;; TODO check that the IDs are the same
+	 (process-request-str (read-line server) server)
          ))
       ((eq? req-type 'commit)
        (begin
@@ -186,6 +189,7 @@
 
 (request? (eval-str (request-to-str my-req))) ; should be true
 
+;; Server-side process request
 (define (process-request-str c-in client-port)
   (let ((req (eval-str c-in)))
     (if (request? req)

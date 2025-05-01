@@ -10,6 +10,11 @@
 
 (set-x! 3)
 
+(define client-request-id 0)
+
+(define (inc-client-request-id)
+  (set! client-request-id (+ client-request-id 1)))
+
 (define (send-string str port)
   (write-string str port)
   (pp "sent!")
@@ -38,11 +43,83 @@
 (request? (list 'initial 3 (lambda () (set-x! 3)))) ; true
 (request? (list 'initial 3 (set-x! 3)))             ; false
 
-(define (process-request req)
-  ;; TODO logic for processing a request
-  (pp (list 'evaluated ((request-body req))))
-  
-  )
+
+;; handling of requests on the client side
+(define (process-request-client req)
+  (let ((req-type (request-type req)))
+    (cond
+      ((eq? req-type 'initial)
+       (error "client should not receive initial request"))
+      ((eq? req-type 'prepare)
+       (begin
+	 (pp "Sending prepare request back from client to server")
+	 ; how does server know which client is which (no client-id in request)?
+	 (send-request 8002 req-type client-request-id (request-body req))
+         ))
+      ((eq? req-type 'commit)
+       (begin
+         (pp "Received committed request, evaluating body")
+	 (pp (list 'evaluated ((request-body req))))
+         ))
+      ((eq? req-type 'abort)
+       (begin
+         (pp "Received aborted request")
+         ))
+      ((eq? req-type 'ignore)
+       (begin
+         (pp "Received ignored request") ; print more stuff here
+         ))
+      (else
+        (error "unknown request type")
+       ))))
+
+(define server-clients ()) ; list of all client ports
+
+(define ignore-request? (lambda () #f)) ; TODO put actual logic here of checking previous request type to see if previous one was not commit or abort
+
+(define num-prepares-received 0)
+
+(define (inc-num-prepares-received)
+  (set! num-prepares-received (+ num-prepares-received 1)))
+
+(define num-clients (length server-clients))
+
+(define (send-to-all-clients client-ports request)
+  (for-each 
+   (lambda (client)
+     (send-request client (request-type request) (request-id request) (request-body request)))
+   client-ports))
+
+;; handling of requests on the server side
+(define (process-request-server req)
+  (let ((req-type (request-type req)))
+    (cond 
+     ((eq? req-type 'initial)
+      (begin
+	(pp "Server received initial request")
+	(if (ignore-request?)
+	    () ; send ignore back to original client?
+	    (send-to-all-clients server-clients (make-request 'prepare (request-id req) (request-body req)))
+	)))
+      ((eq? req-type 'prepare)
+       (begin
+	 (pp "Received prepare requests from a client")
+	 (if (= num-prepares-received num-clients)
+	     (send-to-all-clients server-clients (make-request 'commit (request-id req) (request-body req)))
+	     (inc-num-prepares-received))
+         ))
+      ((eq? req-type 'commit)
+        (error "server should not receive commit request")
+       )
+      ((eq? req-type 'abort)
+        (error "server should not receive abort request")
+       )
+      ((eq? req-type 'ignore)
+        (error "server should not receive ignore request")
+       )
+      (else
+       (error "unknown request type")
+      )))) 
 
 (define (make-request type id proc)
   (list type id proc))
@@ -89,7 +166,7 @@
 (define (process-request-str c-in)
   (let ((req (eval-str c-in)))
     (if (request? req)
-	(process-request req)
+	(process-request-server req) ; using server version for now
 	(error "Object was not a request"))))
 
 (process-request-str (request-to-str (make-request 'commit 3 (lambda () 3))))

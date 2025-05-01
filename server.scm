@@ -5,12 +5,13 @@
 
 (define board (initialize-board))
 
-;; (define s)
+(define s 0)
 
+;; Allows to "stall" - used from https://github.com/lrsjohnson/scheme-mapreduce
 (define (make-server port-num)
   (let ((server-socket (open-tcp-server-socket port-num)))
     (pp 'server-socket-created)
-    ;; (set! s server-socket)
+    (set! s server-socket)
     (let ((incoming-port (tcp-server-connection-accept
 			  server-socket
 			  #t ;; Block on Port
@@ -21,11 +22,78 @@
 	(process-request-str c-in incoming-port)
 	(lp (read-line incoming-port))))))
 
+(define server-clients ()) ; list of all client ports
+
+(define num-clients (lambda () (length server-clients)))
+
+(define prev-server-request 'commit) ; initialize to commit so first request isn't ignored
+
+;; if the previous request wasn't commit or abort, then its still ongoing
+;; ignore any new attempted initial requests until previous one finished
+(define (ignore-request?)
+  (and (not (eq? prev-server-request 'commit)) (not (eq? prev-server-request 'abort))))
+
+;; tracking prepares received by clients
+(define num-prepares-received 0)
+
+(define (inc-num-prepares-received)
+  (set! num-prepares-received (+ num-prepares-received 1))
+  num-prepares-received)
+
+(define (reset-prepares)
+  (set! num-prepares-received 0)
+  0)
+
+;; sends request to every port in client-ports
+(define (send-to-all-clients client-ports request)
+  (for-each 
+   (lambda (client)
+     (send-request client (request-type request) (request-id request) (request-body request)))
+   client-ports))
+
+;; handling of requests on the server side
+(define (process-request-server req client)
+  ;; Code for adding clients to the server
+  (if (memq client server-clients)
+      ()
+      (set! server-clients (cons client server-clients)))
+  ;; TODO: what happens when clients disconnect?
+  (let ((req-type (request-type req)))
+    (cond 
+     ((eq? req-type 'initial)
+      (begin
+	(pp "Server received an initial request")
+	(if (ignore-request?)
+	    (send-request client 'ignore (request-id request) (request-body request))
+	    (send-to-all-clients server-clients (make-request 'prepare (request-id req) (request-body req))))
+	))
+      ((eq? req-type 'prepare)
+       (begin
+	 (pp "Server received a prepare request from a client")
+	 (inc-num-prepares-received)
+	 (if (>= num-prepares-received (num-clients))
+	     (begin
+	       (send-to-all-clients server-clients (make-request 'commit (request-id req) (request-body req)))
+	       (reset-prepares)))
+         ))
+      ((eq? req-type 'commit)
+        (error "server should not receive commit request")
+       )
+      ((eq? req-type 'abort)
+        (error "server should not receive abort request")
+       )
+      ((eq? req-type 'ignore)
+        (error "server should not receive ignore request")
+       )
+      (else
+       (error "unknown request type")
+      ))))
+
 ;; Server-side process request
 (define (process-request-str c-in client-port)
   (let ((req (eval-str c-in)))
     (if (request? req)
-	(process-request-server req client-port) ; using server version for now
+	(process-request-server req client-port)
 	(error "Object was not a request"))))
 
 (set! server-clients '())

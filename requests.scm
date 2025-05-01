@@ -79,7 +79,7 @@
 
 (define server-clients ()) ; list of all client ports, TODO: add logic for adding clients
 
-(define num-clients (lambda() (length server-clients)))
+(define num-clients (lambda () (length server-clients)))
 
 (define prev-server-request 'commit) ; initialize to commit so first request isn't ignored
 
@@ -117,7 +117,7 @@
       ((eq? req-type 'prepare)
        (begin
 	 (pp "Server received a prepare request from a client")
-	 (if (= num-prepares-received num-clients)
+	 (if (= num-prepares-received (num-clients))
 	     (send-to-all-clients server-clients (make-request 'commit (request-id req) (request-body req)))
 	     (inc-num-prepares-received))
          ))

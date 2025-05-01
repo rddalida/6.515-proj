@@ -79,7 +79,7 @@
 
 (define server-clients ()) ; list of all client ports, TODO: add logic for adding clients
 
-(define num-clients (lambda() (length server-clients)))
+(define num-clients (lambda () (length server-clients)))
 
 (define prev-server-request 'commit) ; initialize to commit so first request isn't ignored
 

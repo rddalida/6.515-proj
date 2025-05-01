@@ -95,6 +95,10 @@
   (set! num-prepares-received (+ num-prepares-received 1))
   num-prepares-received)
 
+(define (reset-prepares)
+  (set! num-prepares-received 0)
+  0)
+
 ;; sends request to every port in client-ports
 (define (send-to-all-clients client-ports request)
   (for-each 
@@ -104,7 +108,11 @@
 
 ;; handling of requests on the server side
 (define (process-request-server req client)
-  ;; TODO: code that adds client to server-clients if its not already there
+  ;; Code for adding clients to the server
+  (if (memq client server-clients)
+      ()
+      (set! server-clients (cons client server-clients)))
+  ;; TODO: what happens when clients disconnect?
   (let ((req-type (request-type req)))
     (cond 
      ((eq? req-type 'initial)
@@ -117,9 +125,11 @@
       ((eq? req-type 'prepare)
        (begin
 	 (pp "Server received a prepare request from a client")
-	 (if (= num-prepares-received num-clients)
-	     (send-to-all-clients server-clients (make-request 'commit (request-id req) (request-body req)))
-	     (inc-num-prepares-received))
+	 (inc-num-prepares-received)
+	 (if (= num-prepares-received (num-clients))
+	     (begin
+	       (send-to-all-clients server-clients (make-request 'commit (request-id req) (request-body req)))
+	       (reset-prepares)))
          ))
       ((eq? req-type 'commit)
         (error "server should not receive commit request")

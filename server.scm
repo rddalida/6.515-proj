@@ -18,6 +18,7 @@
 			  #t ;; Block on Port
 			  #f)))
       (pp 'connection-accepted)
+      (set! server-clients (cons incoming-port server-clients))
       (let lp ((c-in (read-line incoming-port)))
 	(pp (list 'received-from port-num c-in))
 	(process-request-str c-in incoming-port)
@@ -98,13 +99,13 @@
 	(error "Object was not a request"))))
 
 ;; How to support multiple clients
-#|
 (set! server-clients '())
 
+#|
 (parallel-execute
- (lambda () (make-server 13000))
- (lambda () (make-server 13001))
- (lambda () (make-server 13002)))
+ (lambda () (make-server 27000))
+ (lambda () (make-server 27001))
+ (lambda () (make-server 27002)))
 |#
 
 ;; (close-tcp-server-socket s)

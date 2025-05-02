@@ -28,7 +28,7 @@
        (error "client should not receive initial request"))
       ((eq? req-type 'prepare)
        (begin
-	 (pp "Client received prepare, sending back to server")
+	 ;; (pp "Client received prepare, sending back to server")
 	 (send-request server 'prepare id-num (request-body req))
 	 (receive-request server)
 	 ;; Now the client hangs until it receives the request back
@@ -36,7 +36,7 @@
          ))
       ((eq? req-type 'commit)
        (begin
-         (pp "Client received committed request, evaluating body")
+         ;; (pp "Client received committed request, evaluating body")
 	 (pp (list 'evaluated ((request-body req))))
          ))
       ((eq? req-type 'abort)
@@ -69,13 +69,24 @@
                            (lp))))
 	c))
 
-
-;; Testing
 #|
-(define client-port (start-client 17001))
-(define client-port (start-client 17002))
+;; Testing, run these in the given order on two clients after starting the server
+;; client 1
+(define client-port (start-client 27001))
+;; client 2
+(define client-port (start-client 27002))
 
-(initiate-request client-port (lambda () (place-symbol "O" 0 3 board)))
+;; client 1
+(initiate-request client-port (lambda () (place-symbol "X" 1 0 board)))
+;; client 2
+(initiate-request client-port (lambda () (place-symbol "O" 2 3 board)))
+(initiate-request client-port (lambda () (place-symbol "O" 2 4 board)))
+(initiate-request client-port (lambda () (print-board board)))
+;; client 1
+(initiate-request client-port (lambda () (place-symbol "X" 1 1 board)))
+(initiate-request client-port (lambda () (place-symbol "X" 1 2 board)))
+(initiate-request client-port (lambda () (place-symbol "X" 1 3 board)))
+(initiate-request client-port (lambda () (place-symbol "X" 1 4 board)))
 (initiate-request client-port (lambda () (print-board board)))
 (initiate-request client-port (lambda () (check-win board)))
 |#

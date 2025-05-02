@@ -2,6 +2,7 @@
 
 (load "requests")
 (load "tictactoe")
+(load "parallel")
 
 (define board (initialize-board))
 
@@ -96,7 +97,14 @@
 	(process-request-server req client-port)
 	(error "Object was not a request"))))
 
+;; How to support multiple clients
+#|
 (set! server-clients '())
 
-(make-server 10001)
+(parallel-execute
+ (lambda () (make-server 13000))
+ (lambda () (make-server 13001))
+ (lambda () (make-server 13002)))
+|#
+
 ;; (close-tcp-server-socket s)

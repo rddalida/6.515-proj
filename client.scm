@@ -2,6 +2,7 @@
 
 (load "requests")
 (load "tictactoe")
+(load "parallel")
 
 (define board (initialize-board))
 
@@ -9,15 +10,15 @@
   (let ((socket (open-tcp-stream-socket "localhost" port-num)))
     socket))
 
-(define port-num 10001)
-(define c (make-client port-num))
-
 (define id-num 0)
 
-(define (initiate-request cont)
+(define (receive-request port)
+  (process-request-str (read-line port) port))
+
+(define (initiate-request port cont)
   (set! id-num (+ 1 id-num))
-  (send-request c 'initial id-num cont)
-  (process-request-str (read-line c) c))
+    (send-request port 'initial id-num cont)
+    (receive-request port))
 
 ;; handling of requests on the client side
 (define (process-request-client req server)
@@ -29,9 +30,9 @@
        (begin
 	 (pp "Client received prepare, sending back to server")
 	 (send-request server 'prepare id-num (request-body req))
+	 (receive-request server)
 	 ;; Now the client hangs until it receives the request back
 	 ;; TODO check that the IDs are the same
-	 (process-request-str (read-line server) server)
          ))
       ((eq? req-type 'commit)
        (begin
@@ -57,6 +58,24 @@
 	(process-request-client req server-port)
 	(error "Object was not a request"))))
 
-(initiate-request (lambda () (place-symbol "O" 1 2 board)))
-(initiate-request (lambda () (print-board board)))
-(initiate-request (lambda () (check-win board)))
+(define (start-client port-num)
+  (let ((c (make-client port-num)))
+        (create-thread #f
+                       (lambda ()
+                         (let lp ()
+                           (if (char-ready? c)
+                             (without-interrupts (lambda () (receive-request c)))
+                             ())
+                           (lp))))
+	c))
+
+
+;; Testing
+#|
+(define client-port (start-client 17001))
+(define client-port (start-client 17002))
+
+(initiate-request client-port (lambda () (place-symbol "O" 0 3 board)))
+(initiate-request client-port (lambda () (print-board board)))
+(initiate-request client-port (lambda () (check-win board)))
+|#

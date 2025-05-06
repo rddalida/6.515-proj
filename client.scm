@@ -61,19 +61,16 @@
   (let ((c (make-client port-num)))
         (create-thread #f
                        (lambda ()
-                         (let lp ()
-                           (if (char-ready? c)
-                             (without-interrupts (lambda () (receive-request c)))
-                             ())
-                           (lp))))
+                         (let lp ((c-in (read-line c)))
+			   (without-interrupts (lambda () (process-request-str c-in c)))
+			   (lp (read-line c)))))
 	c))
 
 ;; Testing, run these in the given order on two clients after starting the server
-#|
 ;; client 1
-(define client-port (start-client 24001))
+(define client-port (start-client 21001))
 ;; client 2
-(define client-port (start-client 24002))
+(define client-port (start-client 21002))
 
 ;; client 1
 (initiate-request client-port (lambda () (place-symbol "X" 1 0 board)))
@@ -90,4 +87,5 @@
 (initiate-request client-port (lambda () (check-win board)))
 
 (close-port client-port)
+#|
 |#

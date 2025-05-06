@@ -85,8 +85,8 @@
 	(if (ignore-request?)
 	    (send-request client 'ignore (request-id req) (request-body req))
            (begin (set! finished-prev-request #f) 
-	    (send-to-all-clients server-clients (make-request 'prepare (request-id req) (request-body req)))
-	     (sleep-seconds 15)))
+	    (send-to-all-clients server-clients (make-request 'prepare (request-id req) (request-body req)))))
+	    ;  (sleep-seconds 15)))
 	;(set! finished-prev-request #f) ; starting a new request
         ))
       ((eq? req-type 'prepare)
@@ -126,9 +126,9 @@
 (set! server-clients '())
 
 (parallel-execute
- (lambda () (make-server 24000))
- (lambda () (make-server 24001))
- (lambda () (make-server 24002)))
+ (lambda () (make-server 21000))
+ (lambda () (make-server 21001))
+ (lambda () (make-server 21002)))
 
 (pp server-clients)
 ;; (close-tcp-server-socket s)

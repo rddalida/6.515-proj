@@ -35,12 +35,15 @@
 
 (define num-clients (lambda () (length server-clients)))
 
-(define prev-server-request 'commit) ; initialize to commit so first request isn't ignored
+;(define prev-server-request 'commit) ; initialize to commit so first request isn't ignored
+(define finished-prev-request #t) ; start off assuming we already finished the previous request
 
 ;; if the previous request wasn't commit or abort, then its still ongoing
 ;; ignore any new attempted initial requests until previous one finished
+;(define (ignore-request?)
+  ;(and (not (eq? prev-server-request 'commit)) (not (eq? prev-server-request 'abort))))
 (define (ignore-request?)
-  (and (not (eq? prev-server-request 'commit)) (not (eq? prev-server-request 'abort))))
+  (not finished-prev-request))
 
 ;; tracking prepares received by clients
 (define num-prepares-received 0)
@@ -80,9 +83,12 @@
       (begin
 	(pp "Server received an initial request")
 	(if (ignore-request?)
-	    (send-request client 'ignore (request-id request) (request-body request))
-	    (send-to-all-clients server-clients (make-request 'prepare (request-id req) (request-body req))))
-	))
+	    (send-request client 'ignore (request-id req) (request-body req))
+           (begin (set! finished-prev-request #f) 
+	    (send-to-all-clients server-clients (make-request 'prepare (request-id req) (request-body req)))
+	     (sleep-seconds 15)))
+	;(set! finished-prev-request #f) ; starting a new request
+        ))
       ((eq? req-type 'prepare)
        (begin
 	 (pp "Server received a prepare request from a client")
@@ -93,7 +99,8 @@
 	     (begin
 	       (send-to-all-clients server-clients (make-request 'commit (request-id req) (request-body req)))
                (set! request-history (cons (make-request 'commit (request-id req) (request-body req)) request-history)) ; add req to request history
-	       (reset-prepares)))
+	       (reset-prepares)
+               (set! finished-prev-request #t))) ; finished this request
          ))
       ((eq? req-type 'commit)
         (error "server should not receive commit request")

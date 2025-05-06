@@ -8,6 +8,8 @@
 
 (define s 0)
 
+(define request-history '()) ; stores history of all committed requests
+
 ;; Allows to "stall" - used from https://github.com/lrsjohnson/scheme-mapreduce
 (define (make-server port-num)
   (let ((server-socket (open-tcp-server-socket port-num)))
@@ -19,6 +21,9 @@
 			  #f)))
       (pp 'connection-accepted)
       (set! server-clients (cons incoming-port server-clients))
+      (for-each (lambda (req) ; send each committed request to new client
+         (send-request incoming-port (request-type req) (request-id req) (request-body req)))
+       request-history)
       (let lp ((c-in (read-line incoming-port)))
 	(pp (list 'received-from port-num c-in))
 	(process-request-str c-in incoming-port)
@@ -56,9 +61,6 @@
 ;; handling of requests on the server side
 (define (process-request-server req client)
   ;; Code for adding clients to the server
-  (if (memq client server-clients)
-      ()
-      (set! server-clients (cons client server-clients)))
   ;; TODO: what happens when clients disconnect?
   (let ((req-type (request-type req)))
     (cond 
@@ -76,6 +78,7 @@
 	 (if (>= num-prepares-received (num-clients))
 	     (begin
 	       (send-to-all-clients server-clients (make-request 'commit (request-id req) (request-body req)))
+               (set! request-history (cons (make-request 'commit (request-id req) (request-body req)) request-history)) ; add req to request history
 	       (reset-prepares)))
          ))
       ((eq? req-type 'commit)

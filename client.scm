@@ -17,8 +17,7 @@
 
 (define (initiate-request port cont)
   (set! id-num (+ 1 id-num))
-    (send-request port 'initial id-num cont)
-    (receive-request port))
+    (send-request port 'initial id-num cont))
 
 ;; handling of requests on the client side
 (define (process-request-client req server)
@@ -69,12 +68,12 @@
                            (lp))))
 	c))
 
-#|
 ;; Testing, run these in the given order on two clients after starting the server
+#|
 ;; client 1
-(define client-port (start-client 27001))
+(define client-port (start-client 24001))
 ;; client 2
-(define client-port (start-client 27002))
+(define client-port (start-client 24002))
 
 ;; client 1
 (initiate-request client-port (lambda () (place-symbol "X" 1 0 board)))
@@ -89,4 +88,6 @@
 (initiate-request client-port (lambda () (place-symbol "X" 1 4 board)))
 (initiate-request client-port (lambda () (print-board board)))
 (initiate-request client-port (lambda () (check-win board)))
+
+(close-port client-port)
 |#

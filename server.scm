@@ -15,19 +15,21 @@
   (let ((server-socket (open-tcp-server-socket port-num)))
     (pp 'server-socket-created)
     (set! s server-socket)
-    (let ((incoming-port (tcp-server-connection-accept
+    (let ns ((incoming-port (tcp-server-connection-accept
 			  server-socket
 			  #t ;; Block on Port
 			  #f)))
       (pp 'connection-accepted)
-      (set! server-clients (cons incoming-port server-clients))
-      (for-each (lambda (req) ; send each committed request to new client
-         (send-request incoming-port (request-type req) (request-id req) (request-body req)))
-       request-history)
+      (add-client incoming-port)
       (let lp ((c-in (read-line incoming-port)))
-	(pp (list 'received-from port-num c-in))
-	(process-request-str c-in incoming-port)
-	(lp (read-line incoming-port))))))
+        (pp (list 'received-from port-num c-in))
+        (if (eof-object? c-in)
+          (begin
+            (disconnect-client incoming-port)
+            (ns (tcp-server-connection-accept server-socket #t #f)))
+          (begin
+            (process-request-str c-in incoming-port)
+            (lp (read-line incoming-port))))))))
 
 (define server-clients ()) ; list of all client ports
 
@@ -50,6 +52,16 @@
 (define (reset-prepares)
   (set! num-prepares-received 0)
   0)
+
+(define (add-client incoming-port)
+      (set! server-clients (cons incoming-port server-clients))
+      (for-each (lambda (req) ; send each committed request to new client
+                  (send-request incoming-port (request-type req) (request-id req) (request-body req)))
+                request-history))
+
+(define (disconnect-client client-port)
+  (set! server-clients (delete client-port server-clients))
+  (close-port client-port))
 
 ;; sends request to every port in client-ports
 (define (send-to-all-clients client-ports request)
@@ -75,6 +87,8 @@
        (begin
 	 (pp "Server received a prepare request from a client")
 	 (inc-num-prepares-received)
+	 (pp num-prepares-received)
+	 (pp (num-clients))
 	 (if (>= num-prepares-received (num-clients))
 	     (begin
 	       (send-to-all-clients server-clients (make-request 'commit (request-id req) (request-body req)))
@@ -104,11 +118,10 @@
 ;; How to support multiple clients
 (set! server-clients '())
 
-#|
 (parallel-execute
- (lambda () (make-server 27000))
- (lambda () (make-server 27001))
- (lambda () (make-server 27002)))
-|#
+ (lambda () (make-server 24000))
+ (lambda () (make-server 24001))
+ (lambda () (make-server 24002)))
 
+(pp server-clients)
 ;; (close-tcp-server-socket s)

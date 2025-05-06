@@ -10,6 +10,12 @@
 
 (set-x! 3)
 
+(define (sleep-seconds seconds)
+  (let ((start-time (get-universal-time)))
+    (let loop ()
+      (if (< (- (get-universal-time) start-time) seconds)
+          (loop)))))
+
 (define (send-string str port)
   (write-string str port)
   (pp "sent!")

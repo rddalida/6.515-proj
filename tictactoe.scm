@@ -81,3 +81,8 @@
 (place-symbol "O" 3 3 board)
 (place-symbol "O" 4 4 board)
 (place-symbol "X" 1 3 board)
+(print-board board)
+
+(check-win board)
+#|
+|#

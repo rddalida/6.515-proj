@@ -10,6 +10,12 @@
 
 (set-x! 3)
 
+(define (sleep-seconds seconds)
+  (let ((start-time (get-universal-time)))
+    (let loop ()
+      (if (< (- (get-universal-time) start-time) seconds)
+          (loop)))))
+
 (define (send-string str port)
   (write-string str port)
   (pp "sent!")
@@ -37,12 +43,6 @@
 
 (request? (list 'initial 3 (lambda () (set-x! 3)))) ; true
 (request? (list 'initial 3 (set-x! 3)))             ; false
-
-(define (process-request req)
-  ;; TODO logic for processing a request
-  (pp (list 'evaluated ((request-body req))))
-  
-  )
 
 (define (make-request type id proc)
   (list type id proc))
@@ -85,34 +85,6 @@
 (request-to-str my-req)
 
 (request? (eval-str (request-to-str my-req))) ; should be true
-
-(define (process-request-str c-in)
-  (let ((req (eval-str c-in)))
-    (if (request? req)
-	(process-request req)
-	(error "Object was not a request"))))
-
-(process-request-str (request-to-str (make-request 'commit 3 (lambda () 3))))
-
-;; Allows to "stall" - used from https://github.com/lrsjohnson/scheme-mapreduce
-(define (make-server port-num)
-  (let ((server-socket (open-tcp-server-socket port-num)))
-    (pp 'server-socket-created)
-    (let ((incoming-port (tcp-server-connection-accept
-			  server-socket
-			  #t ;; Block on Port
-			  #f)))
-      (pp 'connection-accepted)
-      (let lp ((c-in (read-line incoming-port)))
-	(pp (list 'received-from port-num c-in))
-	(process-request-str c-in)
-	;; logic based on c-in
-	(lp (read-line incoming-port))))))
-
-(define (make-client port-num)
-  (let ((socket (open-tcp-stream-socket "localhost" port-num)))
-    socket))
-
 
 ;; Sends a request to the given i/o port.
 ;; port - output port to send requests to

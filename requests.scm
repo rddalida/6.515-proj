@@ -18,7 +18,7 @@
 
 (define (send-string str port)
   (write-string str port)
-  (pp "sent!")
+;;(pp "sent!")
   (flush-output port))
 
 ;; Request framework

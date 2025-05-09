@@ -4,8 +4,6 @@
 (load "tictactoe")
 (load "parallel")
 
-(define board (initialize-board))
-
 (define s 0)
 
 (define request-history '()) ; stores history of all committed requests
@@ -28,7 +26,7 @@
             (disconnect-client incoming-port)
             (ns (tcp-server-connection-accept server-socket #t #f)))
           (begin
-            (process-request-str c-in incoming-port)
+            (without-interrupts (lambda () (process-request-str c-in incoming-port)))
             (lp (read-line incoming-port))))))))
 
 (define server-clients ()) ; list of all client ports
@@ -93,8 +91,6 @@
        (begin
 	 (pp "Server received a prepare request from a client")
 	 (inc-num-prepares-received)
-	 (pp num-prepares-received)
-	 (pp (num-clients))
 	 (if (>= num-prepares-received (num-clients))
 	     (begin
 	       (send-to-all-clients server-clients (make-request 'commit (request-id req) (request-body req)))
@@ -122,13 +118,15 @@
 	(process-request-server req client-port)
 	(error "Object was not a request"))))
 
+(define board (initialize-board))
+
 ;; How to support multiple clients
 (set! server-clients '())
 
 (parallel-execute
- (lambda () (make-server 21000))
- (lambda () (make-server 21001))
- (lambda () (make-server 21002)))
+ (lambda () (make-server 28002))
+ (lambda () (make-server 28000))
+ (lambda () (make-server 28001)))
 
 (pp server-clients)
 ;; (close-tcp-server-socket s)

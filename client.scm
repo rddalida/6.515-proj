@@ -4,8 +4,6 @@
 (load "tictactoe")
 (load "parallel")
 
-(define board (initialize-board))
-
 (define (make-client port-num)
   (let ((socket (open-tcp-stream-socket "localhost" port-num)))
     socket))
@@ -15,9 +13,12 @@
 (define (receive-request port)
   (process-request-str (read-line port) port))
 
+(define return-values '())
+
 (define (initiate-request port cont)
   (set! id-num (+ 1 id-num))
-    (send-request port 'initial id-num cont))
+  (send-request port 'initial id-num cont)
+  )
 
 ;; handling of requests on the client side
 (define (process-request-client req server)
@@ -36,7 +37,9 @@
       ((eq? req-type 'commit)
        (begin
          ;; (pp "Client received committed request, evaluating body")
-	 (pp (list 'evaluated ((request-body req))))
+	 (let ((result (ignore-errors (lambda () ((request-body req))))))
+	   (pp (list 'evaluated result))
+	   result)
          ))
       ((eq? req-type 'abort)
        (begin
@@ -67,10 +70,13 @@
 	c))
 
 ;; Testing, run these in the given order on two clients after starting the server
+#|
 ;; client 1
 (define client-port (start-client 21001))
 ;; client 2
 (define client-port (start-client 21002))
+
+(define board (initialize-board))
 
 ;; client 1
 (initiate-request client-port (lambda () (place-symbol "X" 1 0 board)))
@@ -87,5 +93,4 @@
 (initiate-request client-port (lambda () (check-win board)))
 
 (close-port client-port)
-#|
 |#
